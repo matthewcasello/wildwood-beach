@@ -214,6 +214,29 @@
   .ostat .ov { font-size: 1.7rem; font-weight: 800; color: var(--ocean-deep); margin-top: 4px; line-height: 1.1; }
   .ostat .os { font-size: 0.78rem; color: var(--ink-soft); margin-top: 2px; }
 
+  /* ---------- Surf cam ---------- */
+  .cam-loc { font-weight: 500; text-transform: none; letter-spacing: 0; margin-left: auto; font-size: 0.78rem; color: #94a3b8; }
+  .cam-wrap { position: relative; display: block; border-radius: 14px; overflow: hidden; }
+  .cam-wrap img { width: 100%; display: block; aspect-ratio: 16/9; object-fit: cover; background: #0f172a; }
+  .cam-wrap::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 65%, rgba(7,40,68,0.55));
+    pointer-events: none;
+  }
+  .cam-badge {
+    position: absolute; bottom: 12px; left: 12px; z-index: 1;
+    background: rgba(239,68,68,0.92); color: #fff;
+    font-size: 0.82rem; font-weight: 700;
+    padding: 6px 14px; border-radius: 999px;
+    transition: transform 0.15s ease;
+  }
+  .cam-wrap:hover .cam-badge { transform: scale(1.06); }
+  .cam-time {
+    position: absolute; bottom: 14px; right: 14px; z-index: 1;
+    color: rgba(255,255,255,0.92); font-size: 0.78rem; font-weight: 600;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  }
+
   /* ---------- 7-day ---------- */
   .daily { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
   .day-card {
@@ -332,6 +355,15 @@
       </div>
       <svg id="tideChart" viewBox="0 0 1000 240"></svg>
       <div class="tide-table" id="tideTable"></div>
+    </div>
+
+    <div class="card full" id="camCard" style="display:none">
+      <h2><span class="ico">📷</span> Surf Cam <span class="cam-loc">Fleur de Lis · Wildwood Crest beachfront</span></h2>
+      <a id="camLink" href="https://www.wildwoods.tv/" target="_blank" rel="noopener" class="cam-wrap">
+        <img id="camImg" alt="Wildwoods beach cam snapshot" loading="lazy">
+        <span class="cam-badge">▶ Watch Live</span>
+        <span class="cam-time" id="camTime"></span>
+      </a>
     </div>
 
     <div class="card full" id="oceanCard" style="display:none">
@@ -663,6 +695,27 @@ function renderBestWindow(w) {
   el.style.display = '';
 }
 
+const CAM_RAW = 'https://raw.githubusercontent.com/matthewcasello/wildwood-beach/cam';
+
+async function renderCam() {
+  // Snapshot pushed every 5 min by the home server; hide the card if it goes stale
+  const card = document.getElementById('camCard');
+  try {
+    const r = await fetch(`${CAM_RAW}/meta.json?t=${Date.now()}`);
+    if (!r.ok) throw new Error('no meta');
+    const meta = await r.json();
+    const age = Date.now()/1000 - meta.updated;
+    if (age > 3 * 3600) throw new Error('stale');  // >3h old → camera feed is down
+    document.getElementById('camImg').src = `${CAM_RAW}/snapshot.jpg?t=${meta.updated}`;
+    const mins = Math.max(Math.round(age/60), 0);
+    document.getElementById('camTime').textContent =
+      mins < 2 ? 'just now' : mins < 60 ? `${mins} min ago` : `${Math.round(mins/60)}h ago`;
+    card.style.display = '';
+  } catch (e) {
+    card.style.display = 'none';
+  }
+}
+
 function renderMoon() {
   // Phase from days since known new moon (2000-01-06 18:14 UTC), synodic month 29.53059d
   const synodic = 29.530588853;
@@ -797,6 +850,7 @@ async function refresh() {
     renderOcean(marine);
     renderAlerts(alerts);
     renderMoon();
+    renderCam();
     err.style.display = 'none';
     document.getElementById('updated').textContent =
       'Updated ' + new Date().toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
