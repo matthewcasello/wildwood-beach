@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#7cb8d6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>North Wildwood Beach Report</title>
 <meta name="description" content="Live tides, weather, UV index, and wind for North Wildwood, NJ — refreshed every 5 minutes.">
 <meta property="og:title" content="North Wildwood Beach Report 🌊">
@@ -30,6 +33,8 @@
     background: linear-gradient(180deg, #e0f2fe 0%, #f0f9ff 40%, #fffbeb 100%);
     color: var(--ink);
     min-height: 100vh;
+    -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
   }
 
   /* ---------- Hero ---------- */
@@ -91,6 +96,7 @@
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     padding: 22px;
+    min-width: 0; /* let cards shrink below content width (hourly strip blowout) */
   }
   .card.full { grid-column: 1 / -1; }
   .card h2 {
@@ -109,9 +115,8 @@
   .tide-next { font-size: 1.7rem; font-weight: 700; color: var(--ocean-deep); }
   .tide-count { font-size: 1.05rem; color: var(--ink-soft); font-weight: 500; }
   #tideChart { width: 100%; height: auto; display: block; margin-top: 4px; }
-  .tide-table { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  .tide-table { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 14px; }
   .tide-pill {
-    flex: 1 1 110px;
     background: linear-gradient(135deg, #ecfeff, #e0f2fe);
     border: 1px solid #bae6fd;
     border-radius: 14px;
@@ -207,11 +212,25 @@
   }
 
   @media (max-width: 760px) {
-    .grid { grid-template-columns: 1fr; }
-    .hero { min-height: 350px; background-position: center 30%; }
+    .grid { grid-template-columns: 1fr; gap: 12px; }
+    .hero { min-height: 310px; background-position: center 30%; }
     .hero-now { text-align: left; }
     .hero-chips { justify-content: flex-start; }
-    .hero-content { flex-direction: column; align-items: flex-start; }
+    .hero-content { flex-direction: column; align-items: flex-start; gap: 10px; padding: 20px 18px 26px; }
+    .wrap { padding: 0 10px 32px; margin-top: -22px; }
+    .card { padding: 16px 14px; border-radius: 16px; }
+    .tide-hero { gap: 4px 12px; margin-bottom: 4px; }
+    .tide-next { font-size: 1.3rem; }
+    .tide-count { font-size: 0.95rem; }
+    .tide-table { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .tide-pill { padding: 8px 10px; }
+    .tide-pill .tv { font-size: 1.1rem; }
+    .uv-hourly { gap: 3px; height: 78px; }
+    .uvh-num { font-size: 0.58rem; }
+    .wind-wrap { gap: 14px; }
+    .compass { width: 104px; height: 104px; }
+    .hr-item { flex: 0 0 58px; }
+    footer { padding: 0 14px 36px; font-size: 0.72rem; }
   }
 </style>
 </head>
@@ -246,7 +265,7 @@
         <div class="tide-next" id="tideNext">—</div>
         <div class="tide-count" id="tideCount"></div>
       </div>
-      <svg id="tideChart" viewBox="0 0 1000 240" preserveAspectRatio="none"></svg>
+      <svg id="tideChart" viewBox="0 0 1000 240"></svg>
       <div class="tide-table" id="tideTable"></div>
     </div>
 
@@ -481,14 +500,32 @@ function renderTides(hilo, curve, sunTimes) {
     table.appendChild(div);
   });
 
-  // Tide curve: window from now-6h to now+18h
-  const t0 = now.getTime() - 6*3600*1000, t1 = now.getTime() + 18*3600*1000;
+  tideState = { events, curve };
+  drawTideChart();
+}
+
+let tideState = null;
+
+function drawTideChart() {
+  if (!tideState) return;
+  const { events, curve } = tideState;
+  const now = new Date();
+  const svg = document.getElementById('tideChart');
+  const cw = svg.clientWidth || svg.parentElement.clientWidth || 1000;
+  const narrow = cw < 560;
+
+  // Shorter window on phones so the curve stays readable
+  const back = narrow ? 4 : 6, fwd = narrow ? 12 : 18;
+  const t0 = now.getTime() - back*3600*1000, t1 = now.getTime() + fwd*3600*1000;
   const pts = curve
     .map(p => ({ t: parseLocal(p.t).getTime(), v: parseFloat(p.v) }))
     .filter(p => p.t >= t0 && p.t <= t1);
   if (!pts.length) return;
 
-  const W = 1000, H = 240, PADT = 26, PADB = 30;
+  // Draw at the element's real size so text is never stretched
+  const W = cw, H = narrow ? 190 : 240, PADT = 26, PADB = 30;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.style.height = H + 'px';
   const vmin = Math.min(...pts.map(p => p.v)), vmax = Math.max(...pts.map(p => p.v));
   const x = t => (t - t0) / (t1 - t0) * W;
   const y = v => PADT + (1 - (v - vmin) / (vmax - vmin || 1)) * (H - PADT - PADB);
@@ -496,8 +533,8 @@ function renderTides(hilo, curve, sunTimes) {
   let path = `M ${x(pts[0].t).toFixed(1)} ${y(pts[0].v).toFixed(1)}`;
   for (let i = 1; i < pts.length; i++) path += ` L ${x(pts[i].t).toFixed(1)} ${y(pts[i].v).toFixed(1)}`;
   const area = path + ` L ${x(pts[pts.length-1].t).toFixed(1)} ${H} L ${x(pts[0].t).toFixed(1)} ${H} Z`;
+  const clampX = v => Math.max(26, Math.min(W - 26, v));  // keep labels on-canvas
 
-  const svg = document.getElementById('tideChart');
   let inner = `
     <defs>
       <linearGradient id="tideFill" x1="0" y1="0" x2="0" y2="1">
@@ -508,10 +545,12 @@ function renderTides(hilo, curve, sunTimes) {
     <path d="${area}" fill="url(#tideFill)"/>
     <path d="${path}" fill="none" stroke="#0e7490" stroke-width="3" stroke-linecap="round"/>`;
 
-  // Hour labels every 4h
+  // Hour labels every 4h — skip ones that would collide with a low-tide marker label
+  const lowMarkerXs = events.filter(e => e.type === 'L' && e.t.getTime() >= t0 && e.t.getTime() <= t1).map(e => x(e.t.getTime()));
   for (let t = Math.ceil(t0 / (4*3600*1000)) * 4*3600*1000; t <= t1; t += 4*3600*1000) {
+    if (lowMarkerXs.some(mx => Math.abs(mx - x(t)) < (narrow ? 44 : 56))) continue;
     const lbl = new Date(t).toLocaleTimeString('en-US', {hour:'numeric'}).toLowerCase();
-    inner += `<text x="${x(t).toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="13" fill="#64748b" font-family="Outfit,sans-serif">${lbl}</text>`;
+    inner += `<text x="${x(t).toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="${narrow ? 12 : 13}" fill="#64748b" font-family="Outfit,sans-serif">${lbl}</text>`;
   }
 
   // High/low markers within window
@@ -520,14 +559,14 @@ function renderTides(hilo, curve, sunTimes) {
     const above = e.type === 'H';
     inner += `
       <circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="5" fill="${above ? '#0e7490' : '#f59e0b'}" stroke="#fff" stroke-width="2"/>
-      <text x="${ex.toFixed(1)}" y="${(above ? ey - 12 : ey + 22).toFixed(1)}" text-anchor="middle" font-size="13" font-weight="700" fill="#334155" font-family="Outfit,sans-serif">${fmtTime(e.t)}</text>`;
+      <text x="${clampX(ex).toFixed(1)}" y="${(above ? ey - 12 : ey + 22).toFixed(1)}" text-anchor="middle" font-size="${narrow ? 12 : 13}" font-weight="700" fill="#334155" font-family="Outfit,sans-serif">${fmtTime(e.t)}</text>`;
   });
 
   // NOW marker
   const nx = x(now.getTime());
   inner += `
     <line x1="${nx.toFixed(1)}" y1="${PADT-12}" x2="${nx.toFixed(1)}" y2="${H-PADB}" stroke="#ef4444" stroke-width="2" stroke-dasharray="5 4"/>
-    <text x="${nx.toFixed(1)}" y="${PADT-15}" text-anchor="middle" font-size="12" font-weight="800" fill="#ef4444" font-family="Outfit,sans-serif">NOW</text>`;
+    <text x="${clampX(nx).toFixed(1)}" y="${PADT-15}" text-anchor="middle" font-size="12" font-weight="800" fill="#ef4444" font-family="Outfit,sans-serif">NOW</text>`;
 
   svg.innerHTML = inner;
 }
@@ -555,6 +594,9 @@ refresh();
 setInterval(refresh, 5 * 60 * 1000);
 // Also refresh when tab regains focus (e.g., phone wake)
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+// Redraw tide chart at new size on rotate/resize
+let rsTimer;
+window.addEventListener('resize', () => { clearTimeout(rsTimer); rsTimer = setTimeout(drawTideChart, 150); });
 </script>
 </body>
 </html>
