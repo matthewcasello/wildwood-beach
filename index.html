@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Wildwood Beach Report</title>
-<meta name="description" content="Live tides, weather, UV index, and wind for Wildwood, NJ — refreshed every 5 minutes.">
-<meta property="og:title" content="Wildwood Beach Report 🌊">
-<meta property="og:description" content="Live tides, weather, UV index & wind for Wildwood, NJ">
-<meta property="og:image" content="https://matthewcasello.github.io/wildwood-beach/beach.jpg">
+<title>North Wildwood Beach Report</title>
+<meta name="description" content="Live tides, weather, UV index, and wind for North Wildwood, NJ — refreshed every 5 minutes.">
+<meta property="og:title" content="North Wildwood Beach Report 🌊">
+<meta property="og:description" content="Live tides, weather, UV index & wind for North Wildwood, NJ">
+<meta property="og:image" content="https://matthewcasello.github.io/wildwood-beach/hero.jpg">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌊</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -36,7 +36,7 @@
   .hero {
     position: relative;
     min-height: 420px;
-    background: url('beach.jpg') center 60% / cover no-repeat;
+    background: url('hero.jpg') center 14% / cover no-repeat;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
@@ -130,6 +130,17 @@
   .uv-label { font-weight: 700; font-size: 1rem; margin-top: 4px; }
   .uv-max { color: var(--ink-soft); font-size: 0.88rem; margin-top: 8px; }
   .uv-advice { font-size: 0.85rem; color: var(--ink-soft); text-align: center; margin-top: 8px; line-height: 1.45; }
+  .uv-hourly {
+    display: flex; align-items: flex-end; justify-content: center; gap: 4px;
+    width: 100%; height: 86px; margin-top: 16px;
+    padding-top: 10px; border-top: 1px solid #e2e8f0;
+  }
+  .uvh-col { flex: 1 1 0; max-width: 26px; display: flex; flex-direction: column; align-items: center; gap: 3px; height: 100%; justify-content: flex-end; }
+  .uvh-num { font-size: 0.62rem; font-weight: 700; color: var(--ink-soft); line-height: 1; }
+  .uvh-bar { width: 100%; border-radius: 4px 4px 2px 2px; min-height: 3px; transition: height 0.8s ease; }
+  .uvh-col.now .uvh-bar { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .uvh-col.now .uvh-lbl { color: var(--ink); font-weight: 800; }
+  .uvh-lbl { font-size: 0.6rem; font-weight: 600; color: #94a3b8; line-height: 1; white-space: nowrap; }
 
   /* ---------- Wind ---------- */
   .wind-wrap { display: flex; align-items: center; justify-content: center; gap: 20px; }
@@ -197,7 +208,7 @@
 
   @media (max-width: 760px) {
     .grid { grid-template-columns: 1fr; }
-    .hero { min-height: 350px; }
+    .hero { min-height: 350px; background-position: center 30%; }
     .hero-now { text-align: left; }
     .hero-chips { justify-content: flex-start; }
     .hero-content { flex-direction: column; align-items: flex-start; }
@@ -209,7 +220,7 @@
 <div class="hero">
   <div class="hero-content">
     <div class="hero-loc">
-      <h1>Wildwood, NJ&nbsp;🌊</h1>
+      <h1>North Wildwood, NJ&nbsp;🌊</h1>
       <div class="sub" id="dateLine">Loading…</div>
     </div>
     <div class="hero-now">
@@ -230,7 +241,7 @@
   <div class="grid">
 
     <div class="card full">
-      <h2><span class="ico">🌊</span> Tides — Wildwood Crest (NOAA 8535835)</h2>
+      <h2><span class="ico">🌊</span> Tides — Wildwoods Beachfront (NOAA 8535835)</h2>
       <div class="tide-hero">
         <div class="tide-next" id="tideNext">—</div>
         <div class="tide-count" id="tideCount"></div>
@@ -250,6 +261,7 @@
         <div class="uv-label" id="uvLabel"></div>
         <div class="uv-max" id="uvMax"></div>
         <div class="uv-advice" id="uvAdvice"></div>
+        <div class="uv-hourly" id="uvHourly"></div>
       </div>
     </div>
 
@@ -295,13 +307,12 @@
 
 <footer>
   <div class="updated"><span class="pulse"></span> <span id="updated">Loading…</span> · auto-refreshes every 5 min</div><br>
-  Tides: <a href="https://tidesandcurrents.noaa.gov/noaatidepredictions.html?id=8535835" target="_blank" rel="noopener">NOAA Wildwood Crest</a>
+  Tides: <a href="https://tidesandcurrents.noaa.gov/noaatidepredictions.html?id=8535835" target="_blank" rel="noopener">NOAA — nearest ocean-side station</a>
   · Weather: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>
-  · Photo: John Margolies, Library of Congress (public domain)
 </footer>
 
 <script>
-const LAT = 38.9918, LON = -74.8149, STATION = '8535835';
+const LAT = 39.0007, LON = -74.7993, STATION = '8535835';
 
 const WMO = {
   0:['☀️','Sunny'],1:['🌤️','Mostly Sunny'],2:['⛅','Partly Cloudy'],3:['☁️','Cloudy'],
@@ -385,6 +396,27 @@ function renderWeather(w) {
   document.getElementById('uvLabel').style.color = color;
   document.getElementById('uvMax').textContent = `Today's max: ${Math.round(d.uv_index_max[0])}`;
   document.getElementById('uvAdvice').textContent = advice;
+
+  // Hourly UV bars — 7am to 7pm today
+  const uvBox = document.getElementById('uvHourly');
+  uvBox.innerHTML = '';
+  const nowHour = new Date().getHours();
+  w.hourly.time.forEach((t, i) => {
+    const dt = new Date(t);
+    if (dt.toDateString() !== new Date().toDateString()) return;
+    const h = dt.getHours();
+    if (h < 7 || h > 19) return;
+    const v = w.hourly.uv_index[i];
+    const [barColor] = uvInfo(Math.round(v));
+    const col = document.createElement('div');
+    col.className = 'uvh-col' + (h === nowHour ? ' now' : '');
+    const hl = h === 12 ? '12p' : h > 12 ? (h-12) + 'p' : h + 'a';
+    col.innerHTML = `
+      <div class="uvh-num">${Math.round(v) || ''}</div>
+      <div class="uvh-bar" style="height:${Math.max(Math.min(v/11,1)*100*0.62, 4)}%; background:${barColor}"></div>
+      <div class="uvh-lbl">${hl}</div>`;
+    uvBox.appendChild(col);
+  });
 
   // Wind — arrow shows direction wind is blowing TOWARD
   document.getElementById('windSpd').textContent = Math.round(c.wind_speed_10m);
